@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "name": "Github Repo Search",
+  "version": "1.0.0",
+  "omnibox": { "keyword" : "gh" },
+  "icons": {
+    "16": "assets/GitHub-Mark-32px.png",
+    "32": "assets/GitHub-Mark-32px.png",
+    "64": "assets/GitHub-Mark-64px.png",
+    "128": "assets/Github-Mark-120px-plus.png"
+
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "chrome_style": true
+  },
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "background": {
+    "persistent": true,
+    "scripts": [
+      "node_modules/github-api/github.js",
+      "search.js",
+      "chrome.js"
+    ]
+  }
+}
