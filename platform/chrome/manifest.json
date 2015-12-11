@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Github Repo Search",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "omnibox": { "keyword" : "gh" },
   "icons": {
     "16": "assets/GitHub-Mark-32px.png",
@@ -11,7 +11,7 @@
 
   },
   "options_ui": {
-    "page": "options/options.html",
+    "page": "options.html",
     "chrome_style": true
   },
   "permissions": [
@@ -21,9 +21,7 @@
   "background": {
     "persistent": true,
     "scripts": [
-      "node_modules/github-api/github.js",
-      "search.js",
-      "chrome.js"
+      "chrome.min.js"
     ]
   }
 }
