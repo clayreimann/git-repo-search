@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Github Repo Search",
-  "version": "0.9.0",
-  "omnibox": { "keyword" : "gh" },
+  "name": "Repository Search",
+  "version": "0.9.1",
+  "omnibox": { "keyword" : "git" },
   "icons": {
     "16": "assets/GitHub-Mark-32px.png",
     "32": "assets/GitHub-Mark-32px.png",
