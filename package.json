@@ -1,6 +1,6 @@
 {
   "name": "github-search",
-  "version": "0.1.0",
+  "version": "0.9.1",
   "description": "Search github repositiories from the chrome omnibox",
   "main": "search.js",
   "scripts": {
