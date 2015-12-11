@@ -1,6 +1,6 @@
 {
   "name": "github-search",
-  "version": "0.1.0",
+  "version": "0.9.1",
   "description": "Search github repositiories from the chrome omnibox",
   "main": "search.js",
   "scripts": {
@@ -21,6 +21,7 @@
     "babel-plugin-transform-strict-mode": "^6.3.13",
     "babel-preset-es2015": "^6.3.13",
     "gulp": "^3.9.0",
+    "gulp-watch": "^4.3.5",
     "run-sequence": "^1.1.5",
     "webpack-stream": "^2.3.0"
   },

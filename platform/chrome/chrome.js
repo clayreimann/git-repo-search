@@ -4,7 +4,7 @@
  */
 import SuggestionService from '../../lib/search-service';
 
-const MORE_RESULTS = ' Append ">" to see the next page.'
+const MORE_RESULTS = ' <dim>Append ">" to see the next page.</dim>'
 let CACHE = {};
 
 function initalizeSuggestionService() {
@@ -59,13 +59,16 @@ function getSuggestFunction(suggester) {
     console.log(suggestions.map((s) => s.content));
 
 
-    let description = `${suggestions.length} results for query %s.`
+    let description = `${suggestions.length} results for query <match>%s</match>.`
     if (suggestions.length > 5) {
       description += ` Page ${page + 1} of ${Math.ceil(suggestions.length / 5)}. ${MORE_RESULTS}`
     }
 
     for (let i = 0; i < page && suggestions.length > 5; i++) {
       suggestions = suggestions.slice(5);
+    }
+    if (suggestions.length && suggestions[0].content === text) {
+      description = `${suggestions[0].description}  |  ${description}`
     }
     chrome.omnibox.setDefaultSuggestion({description});
     suggest(suggestions);
@@ -105,9 +108,7 @@ function bindCallbacks(settings) {
 initalizeSuggestionService();
 chrome.omnibox.onInputStarted.addListener(function() {
   console.log('inputStarted');
-  chrome.omnibox.setDefaultSuggestion({
-    description: 'Type to search for a repository'
-  });
+  chrome.omnibox.setDefaultSuggestion({description: 'Type to search for a repository'});
 });
 
 chrome.runtime.onMessage.addListener(function(message) {

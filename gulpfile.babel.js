@@ -5,6 +5,7 @@
 'use strict';
 
 import gulp from 'gulp';
+import watch from 'gulp-watch';
 import webpack from 'webpack-stream';
 
 import del from 'del';
@@ -19,6 +20,12 @@ const VENDOR_ASSETS = [
 const PLATFORMS = [
   'chrome'
 ];
+
+gulp.task('watch', function(done) {
+  watch(['platform/**', 'lib/**'], function() {
+    gulp.start('build');
+  });
+});
 
 gulp.task('build', PLATFORMS.map((p) => `build:${p}`));
 
