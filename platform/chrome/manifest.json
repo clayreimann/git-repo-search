@@ -1,7 +1,12 @@
 {
   "manifest_version": 2,
-  "name": "Repository Search",
   "version": "0.10.0",
+  "name": "Repository Search",
+  "short_name": "Find Git",
+  "description": "Quickly search all your repositories across multiple GitHub instances",
+  "author": "Clay Reimann",
+  "homepage_url": "https://github.com/clayreimann/github-search-extension",
+
   "omnibox": { "keyword" : "git" },
   "icons": {
     "16": "assets/repo-icon@16.png",
@@ -10,18 +15,20 @@
     "128": "assets/repo-icon@128.png"
 
   },
+
   "options_ui": {
     "page": "options.html",
     "chrome_style": true
   },
-  "permissions": [
-    "tabs",
-    "storage"
-  ],
   "background": {
     "persistent": true,
     "scripts": [
       "chrome.min.js"
     ]
-  }
+  },
+
+  "permissions": [
+    "tabs",
+    "storage"
+  ]
 }
