@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Repository Search",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "omnibox": { "keyword" : "git" },
   "icons": {
     "16": "assets/GitHub-Mark-32px.png",
