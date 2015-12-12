@@ -4,10 +4,10 @@
   "version": "0.10.0",
   "omnibox": { "keyword" : "git" },
   "icons": {
-    "16": "assets/GitHub-Mark-32px.png",
-    "32": "assets/GitHub-Mark-32px.png",
-    "64": "assets/GitHub-Mark-64px.png",
-    "128": "assets/Github-Mark-120px-plus.png"
+    "16": "assets/repo-icon@16.png",
+    "32": "assets/repo-icon@32.png",
+    "64": "assets/repo-icon@64.png",
+    "128": "assets/repo-icon@128.png"
 
   },
   "options_ui": {
