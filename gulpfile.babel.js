@@ -102,6 +102,7 @@ var WEBPACK_CONFIG = {
 gulp.task('chrome:compile', function(done) {
   return gulp.src(['platform/chrome/chrome.js', 'platform/chrome/options/options.html'])
     .pipe(webpack(WEBPACK_CONFIG))
+    .on('error', function(e) {done()})
     .pipe(gulp.dest('build/chrome'))
     ;
 });
