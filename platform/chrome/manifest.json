@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "0.10.0",
+  "version": "1.0.0",
   "name": "Repository Search",
   "short_name": "Find Git",
   "description": "Quickly search all your repositories across multiple GitHub instances",

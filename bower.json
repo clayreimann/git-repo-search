@@ -1,0 +1,29 @@
+{
+  "name": "git-repo-search",
+  "description": "Search github repositiories from the chrome omnibox",
+  "main": "search.js",
+  "authors": [
+    "Clay Reimann"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "search",
+    "developer",
+    "devtools",
+    "productivity"
+  ],
+  "homepage": "https://github.com/clayreimann/git-repo-search",
+  "moduleType": [],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.6"
+  }
+}
