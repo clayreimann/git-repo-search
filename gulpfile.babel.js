@@ -5,6 +5,8 @@
 'use strict';
 
 import gulp from 'gulp';
+
+import zip from 'gulp-zip';
 import watch from 'gulp-watch';
 import webpack from 'webpack-stream';
 
@@ -36,7 +38,7 @@ PLATFORMS.forEach((platform) => {
       `${platform}:move-assets`,
       `${platform}:move-vendor`,
       `${platform}:compile`,
-      `${platform}:zip-extension`,
+      `${platform}:build-distributable`,
     done);
   });
 });
@@ -107,7 +109,9 @@ gulp.task('chrome:compile', function(done) {
     ;
 });
 
-gulp.task('chrome:zip-extension', function(done) {
-  // do stuff
-  done();
+gulp.task('chrome:build-distributable', function() {
+  return gulp.src('build/chrome/**')
+    .pipe(zip('chrome.zip'))
+    .pipe(gulp.dest('build'))
+    ;
 })
