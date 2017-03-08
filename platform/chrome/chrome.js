@@ -2,134 +2,115 @@
  * Clay Reimann, 2015
  * See LICENSE.txt for details
  */
-import CommandParser from '../../lib/command-parser';
-import SuggestionService from '../../lib/search-service';
+import CommandParser, {FEATURE_REQUEST, REFRESH} from '../../lib/command-parser';
+import Multiplexer from '../../lib/repo-multiplexer';
 
-const MORE_RESULTS = ' <dim>Append ">" to see the next page.</dim>';
-const FEATURE_REQUEST = 'feature-request';
-const REFRESH = 'refresh';
-const META_COMMANDS = [
-  {
-    content: `!${FEATURE_REQUEST}`,
-    description: '!<match>feature-request</match> - Request a new feature for this extension'
-  },
-  {
-    content: `!${REFRESH}`,
-    description: '<dim>!</dim><match>refresh</match> - Refresh the list of repositories from github'
-  }
-];
-const REPO_COMMANDS = [
-  {
-    content: '!pulls',
-    description: '<dim>!pulls</dim> - View pull requests'
-  },
-  {
-    content: '!issues',
-    description: '<dim>!issues</dim> - View open issues'
-  }
-];
-
+let REPO_FINDER;
+let SETTINGS_LOADED = false;
+let RESULTS = null;
 const COMMAND = new CommandParser('chrome');
+const MORE_RESULTS = ' <dim>Append ">" to see the next page.</dim>';
 
-let HAS_SETTINGS = false;
-let CACHE = {};
-let SUGGESTER = null;
+chrome.omnibox.onInputStarted.addListener(function() { console.log('inputStarted'); });
+chrome.omnibox.onInputChanged.addListener(getSuggestions);
+chrome.omnibox.onInputEntered.addListener(suggestionAccepted);
+chrome.runtime.onMessage.addListener(messageHandler);
 
-function initializeExtension() {
-  chrome.storage.sync.get(['githubs'], initalizeSuggestionService);
-}
+// load settings from chrome
+initializeExtension();
 
-
-function getRepoSuggestions(text) {
-  let suggestions = [];
-
-  if (CACHE.hasOwnProperty(text)) {
-    suggestions = CACHE[text]
-  } else {
-    suggestions = SUGGESTER.getRepositoriesMatching(text)
-      .map(function(repo) {
-        let matches = repo.url.match(new RegExp(text, "i"));
-        return {
-          content: repo.name,
-          description: '<dim>Open</dim> <url>' + repo.url.slice(0, matches.index) +
-            '<match>' + matches[0] + '</match>' +
-            repo.url.slice(matches.index + matches[0].length) + '</url>'
-        };
-      });
-    CACHE[text] = suggestions;
+/**
+ * Return suggestions to the user
+ * @param {string} input the user's input
+ * @param {function} suggestCallback the callback fn([{String:content, String:description}]:suggestions)
+ * @return {[type]} [description]
+ */
+function getSuggestions(input, suggestCallback) {
+  console.log(`input: ${input}`);
+  if (!SETTINGS_LOADED) {
+    chrome.omnibox.setDefaultSuggestion({
+      description: 'You need to add at least one GitHub definition. &lt;Enter&gt; to open settings.'
+    });
   }
-
-  return suggestions;
-}
-
-function getSuggestions(input, suggest) {
-  if (SUGGESTER == null) { return; }
-  if (input.length < 1) { return; }
-
-  let {
-    isMeta,
-    isRepo,
-    text,
-    page,
-    command,
-  } = COMMAND.parse(input);
 
   let suggestions, description;
-  if (isMeta) {
-    suggestions = META_COMMANDS.slice();
-    description = 'Execute a command';
-  } else if (isRepo) {
-    description = 'Repository quick links';
-    if (!CACHE.hasOwnProperty(text)) {
-      getRepoSuggestions(text);
-    }
-    let repo = CACHE[text][0];
-    suggestions = REPO_COMMANDS.map((command) => {
-      return {
-        content: repo.content + command.content,
-        description: repo.description + command.description
-      };
-    });
+  let { isMetaCmd, isRepoCmd, page, command, text } = COMMAND.parse(input);
+  if (isMetaCmd) {
+    description = 'Enter a command';
+    suggestions = COMMAND.getMetaCommands();
+  } else if (isRepoCmd) {
+    description = 'Repository shortcut'
+    suggestions = COMMAND.getShortcutsFor(RESULTS[0])
   } else {
-    suggestions = getRepoSuggestions(text)
-    if (suggestions.length > 5) {
-      description += ` Page ${page + 1} of ${Math.ceil(suggestions.length / 5)}. ${MORE_RESULTS}`
-    }
+    let begin = new Date().getTime()
+    let allSuggestions = REPO_FINDER.repositoriesMatching(text);
+    RESULTS = allSuggestions.sort(sortFn).slice(page * 5, (page + 1) * 5);
+    suggestions = RESULTS.map(buildSuggestion)
+      .map((s) => ({content: s.content, description: s.description}));
 
-    for (let i = 0; i < page && suggestions.length > 5; i++) {
-      suggestions = suggestions.slice(5);
-    }
-
-    description = `${suggestions.length} results for query <match>%s</match>.`;
+    description = suggestions.length == 0 ?
+      'Type to search for a repository' :
+      `Found ${allSuggestions.length} matches in ${new Date().getTime() - begin}ms ${allSuggestions.length > 4 ? MORE_RESULTS : ''}`;
+    console.log(suggestions);
   }
 
-  suggestions.some((s) => {
-    if (s.content === input) {
-      description = `${s.description}  |  ${description}`;
-      return true;
-    }
-  })
-  console.log('returning ' + suggestions.length + ' suggestions');
-  console.log(suggestions);
-
   chrome.omnibox.setDefaultSuggestion({description});
-  suggest(suggestions);
+  suggestCallback(suggestions);
 }
 
+/**
+ * Sort two suggestions by org name then by repo name
+ * @param {object} a a repo suggestion
+ * @param {object} b a repo suggestion
+ * @return {int} -1 if a < b, 0 if a == b, 1 if a > b
+ */
+function sortFn(a, b) {
+  let left = a.name.toLowerCase().split('/'), right = b.name.toLowerCase().split('/');
+  if (left[0] < right[0]) return -1;
+  else if (left[0] > right[0]) return 1;
+  else if (left[1] < right[1]) return -1
+  else if (left[1] > right[1]) return 1
+  else return 0;
+}
+
+/**
+ * Construct the suggestion object that Chrome is expecting
+ *
+ * @param {object} repo the repo descriptor
+ * @return {object} a suggestion object
+ */
+function buildSuggestion(repo) {
+  let url = repo.url;
+  let start = 0;
+  for(let i = 1; i < repo.matches.length; i++) {
+    let match = repo.matches[i];
+    console.log(repo.matches);
+    start = url.indexOf(match, start);
+    url = url.slice(0, start) + `<match>${match}</match>` + url.slice(start + match.length);
+    start = start + '<match>'.length + match.length + '</match>'.length;
+  }
+  return {
+    content: repo.name,
+    description: `<dim>${repo.name} - </dim><url>${url}</url> ${repo.homepage ? `(${repo.homepage})` : ''}`
+  }
+}
+
+/**
+ * Handler for when a user accepts a suggestion
+ *
+ * @param {string} input the text the user accepted
+ * @param {string} disposition how the user wants to open the suggestion
+ */
 function suggestionAccepted(input, disposition) {
-  if (HAS_SETTINGS === false) { chrome.runtime.openOptionsPage(); }
-  if (SUGGESTER == null) { return; }
+  if (!SETTINGS_LOADED) { chrome.runtime.openOptionsPage(); }
+  if (!REPO_FINDER) { return; }
+  if (!input) { return; }
 
-  console.log(`Accepted: ${input} ${disposition}`);
+  console.info(`Accepted: ${input} ${disposition}`);
   let url;
-  let {
-    isMeta,
-    isRepo,
-    command,
-    text
-  } = COMMAND.parse(input);
+  let {isMetaCmd, isRepoCmd, command, text} = COMMAND.parse(input);
 
-  if (isMeta) {
+  if (isMetaCmd) {
     switch (command) {
       case REFRESH:
         initializeExtension();
@@ -138,11 +119,15 @@ function suggestionAccepted(input, disposition) {
         url = 'https://github.com/clayreimann/github-search-extension/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement';
         break;
     }
-  } else if (isRepo) {
-    url = SUGGESTER.getUrlForRepo(text, command);
+  } else if (isRepoCmd) {
+    url = REPO_FINDER.getUrlForRepo(text, command);
   } else {
-    url = SUGGESTER.getUrlForRepo(input)
+    // need to handle short circuited input for 1 result
+    url = REPO_FINDER.getUrlForRepo(text) ||
+          REPO_FINDER.getUrlForRepo(LAST_SUGGESTION);
   }
+
+  // adjustSuggestionWeight(LAST_INPUT, text);
 
   if (disposition === 'currentTab') {
     chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
@@ -153,35 +138,42 @@ function suggestionAccepted(input, disposition) {
   } else if (disposition === 'newBackgroundTab') {
     chrome.tabs.create({url: url});
   }
+
+  RESULTS = null;
 }
 
-function initalizeSuggestionService(settings) {
-  let githubInstances = settings.githubs || [];
+
+function messageHandler(message) {
+  switch (message) {
+    case 'settings-updated':
+      initializeExtension();
+      break;
+  }
+}
+
+function initializeExtension() {
+  chrome.storage.sync.get({
+    'githubs': [],
+    'weights': {}
+  }, initalizeSearchService);
+}
+
+function initalizeSearchService(settings) {
+  let githubInstances = settings.githubs;
   if (githubInstances.length < 1) {
-    HAS_SETTINGS = false;
+    SETTINGS_LOADED = false;
     return;
   }
-  HAS_SETTINGS = true;
-  CACHE = {};
-  SUGGESTER = new SuggestionService(githubInstances);
-  SUGGESTER.queryGithubsForRepositories();
+
+  githubInstances = githubInstances.filter((gh) => gh.token)
+    .map((gh) => {
+      gh.url = gh.url || 'https://api.github.com/v3';
+      return gh;
+    });
+  chrome.storage.sync.set({
+    'githubs': githubInstances
+  });
+
+  window.REPO_FINDER = REPO_FINDER = new Multiplexer(githubInstances);
+  SETTINGS_LOADED = true;
 }
-
-initializeExtension();
-chrome.omnibox.onInputStarted.addListener(function() {
-  console.log('inputStarted');
-  let description = 'You need to add at least one GitHub definition. &lt;Enter&gt; to open settings.';
-  if (HAS_SETTINGS) {
-    description = 'Type to search for a repository';
-  }
-  chrome.omnibox.setDefaultSuggestion({description});
-});
-
-chrome.omnibox.onInputChanged.addListener(getSuggestions);
-chrome.omnibox.onInputEntered.addListener(suggestionAccepted);
-
-chrome.runtime.onMessage.addListener(function(message) {
-  if (message === 'settings-updated') {
-    initializeExtension();
-  }
-});
